@@ -14,7 +14,7 @@
 
 // Copyright 2011 Jun WAKO <wakojun@gmail.com>
 // Copyright 2013 Shay Green <gblargg@gmail.com>
-// See bottom of file for license
+// License below
 
 typedef uint8_t byte;
 
@@ -34,34 +34,29 @@ enum { data_mask = 1<<ADB_DATA_BIT };
 enum { adb_cmd_read  = 0x2C };
 enum { adb_cmd_write = 0x28 };
 
-#ifdef NDEBUG
-	#define LOG( n ) (n)
+#ifdef ADB_REDUCED_TIME
+	enum { adb_cell_time = 75 };
 #else
-	enum { log_size = 0x40 }; // must be power of 2
-	#define LOG( n ) \
-		(adb_debug_log [adb_debug_pos++ & (log_size-1)] = (n))
-	// Log of durations of pulses, for debugging.
-	byte adb_debug_log [log_size];
-	byte adb_debug_pos;
+	enum { adb_cell_time = 100 };
 #endif
 
-static inline void data_lo( void ) { ADB_DDR |= data_mask; }
-static inline void data_hi( void ) { ADB_DDR &= ~data_mask; }
-static inline byte data_in( void ) { return ADB_PIN & data_mask; }
+// gcc is very unreliable for inlining, so use macros
+#define data_lo() (ADB_DDR |=  data_mask)
+#define data_hi() (ADB_DDR &= ~data_mask)
+#define data_in() (ADB_PIN &   data_mask)
 
 static void place_bit( byte bit )
 {
-	// 100 us bit cell time
 	data_lo();
-	_delay_us( 35 );
+	_delay_us( adb_cell_time/3 );
 	
-	// Difference between a 0 and 1 bit is just this 30us portion in the middle
+	// Difference between a 0 and 1 bit is just this third in the middle
 	if ( bit )
 		data_hi();
-	_delay_us( 30 );
+	_delay_us( adb_cell_time/3 );
 	
 	data_hi();
-	_delay_us( 35 );
+	_delay_us( adb_cell_time/3 );
 }
 
 static void place_bit0( void ) { place_bit( 0 ); }
@@ -69,7 +64,8 @@ static void place_bit1( void ) { place_bit( 1 ); }
 
 static void send_byte( byte data )
 {
-	for ( byte n = 8; n; n-- )
+	byte n;
+	for ( n = 8; n; n-- )
 	{
 		place_bit( data & 0x80 );
 		data <<= 1;
@@ -79,7 +75,7 @@ static void send_byte( byte data )
 static void command( byte cmd )
 {
 	data_lo();
-	_delay_us( 800 );
+	_delay_us( adb_cell_time*8 );
 	place_bit1();
 	send_byte( cmd );
 	place_bit0();
@@ -117,7 +113,6 @@ static byte while_data( byte us, byte data )
 		if ( !--us )
 			break;
 	}
-	LOG( us );
 	return us;
 }
 
@@ -155,12 +150,14 @@ static uint16_t adb_host_talk( byte cmd )
 	}
 	while ( --n );
 	
-	// duration must be split in two due to 255 limit
-	if ( !while_lo( 255 ) && !while_lo( 351 - 255 ) )
-		goto error;
+	#ifndef ADB_REDUCED_TIME
+		// duration must be split in two due to 255 limit
+		if ( !while_lo( 255 ) && !while_lo( 351 - 255 ) )
+			goto error;
 	
-	if ( while_hi( 91 ) )
-		goto error;
+		if ( while_hi( 91 ) )
+			goto error;
+	#endif
 	
 	return data;
 	
@@ -181,7 +178,7 @@ uint16_t adb_host_kbd_modifiers( void )
 void adb_host_listen( byte cmd, byte data_h, byte data_l )
 {
 	command( cmd );
-	_delay_us( 200 );
+	_delay_us( adb_cell_time*2 );
 	
 	place_bit1();
 	send_byte( data_h ); 

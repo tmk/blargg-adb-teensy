@@ -1,156 +1,94 @@
-// Simple adapter to connect Apple ADB keyboard to USB computer.
+// Teensy setup and main loop
 
-#include "shell/shell.h"
+// Minimum time between ADB polls
+enum { min_adb_ms = 12 }; // (83Hz) best for everything, and what Macs use
 
-#include "adb.h"
-#include "keymap.h"
+#include <stdbool.h>
+#include <stdint.h>
+#include <avr/io.h>
+#include <avr/sleep.h>
+#include <avr/power.h>
+#include <avr/pgmspace.h>
+#include <avr/interrupt.h>
+#include <util/delay.h>
+
 #include "usb_keyboard.h"
 
-extern byte adb_debug_log [0x40];
-extern byte adb_debug_pos;
+typedef unsigned char byte;
+#define DEBUG( e )
+#include "config.h"
 
-enum { max_keys = 6 };
+#include "adb_usb.h"
 
-static void handle_key( byte raw )
+// Avoid floating inputs on unused pins
+static void pullup_ports( void )
 {
-	byte code = usb_from_adb_code( raw & 0x7F );
-	if ( !code )
-		return;
-	
-	if ( KC_LCTRL <= code && code <= KC_RGUI )
-	{
-		// Modifier; route to mask rather than keys list
-		byte mask = 1 << (code - KC_LCTRL);
-		keyboard_modifier_keys &= ~mask;
-		if ( !(raw & 0x80) )
-			keyboard_modifier_keys |= mask;
-	}
-	else
-	{
-		// Find code in list
-		byte i = 0;
-		do
-		{
-			if ( keyboard_keys [i] == code )
-				break;
-			i++;
-		}
-		while ( i < max_keys );
-		
-		if ( raw & 0x80 )
-		{
-			// Released
-			if ( i >= max_keys )
-			{
-				debug_str( "released key not in list\n" );
-			}
-			else
-			{
-				// Remove from list
-				for ( ; i < max_keys - 1; i++ )
-					keyboard_keys [i] = keyboard_keys [i + 1];
-				
-				keyboard_keys [i] = 0;
-			}
-		}
-		else
-		{
-			// Pressed
-			if ( i < max_keys )
-			{
-				debug_str( "pressed key already in list\n" );
-			}
-			else
-			{
-				// Add to list
-				i = 0;
-				do
-				{
-					if ( keyboard_keys [i] == 0 )
-					{
-						keyboard_keys [i] = code;
-						break;
-					}
-					i++;
-				}
-				while ( i < max_keys );
-			
-				if ( i >= max_keys )
-					debug_str( "too many keys pressed\n" );
-			}
-		}
-	}
-}
-
-static inline void sleep( void )
-{
-	#ifdef SMCR
-		SMCR &= ~(1<<SM2 | 1<<SM1 | 1<<SM0);
-	#endif
-	sleep_enable();
-	sleep_cpu();
-	sleep_disable();
-}
-
-static inline void init( void )
-{
-	init_shell();
-	
-	usb_init();
-	while ( !usb_configured() )
-		{ }
-	
-	delay_msec( 1000 ); // give OS time to load keyboard driver
-	
-	adb_host_init();
-	
-	// Enable separate key codes for left/right shift/control/option keys
-	// on Apple Extended Keyboard.
-    adb_host_listen( 0x2B, 0x02, 0x03 ); // left/right distinction
+	DDRA  = 0;
+	PORTA = 0xFF;
+	DDRB  = 0;
+	PORTB = 0xFF;
+	DDRC  = 0;
+	PORTC = 0xFF;
+	DDRD  = 0;
+	PORTD = 0xFF;
+	DDRE  = 0;
+	PORTE = 0xFF;
+	DDRF  = 0;
+	PORTF = 0xFF;
 }
 
 int main( void )
 {
-	init();
+	clock_prescale_set( clock_div_1 );
 	
-	byte pos = 0;
-	byte leds = -1;
+	// Reduce power usage
+	pullup_ports();
+	power_all_disable();
+	power_usb_enable();
+	power_timer1_enable();
+	
+	adb_usb_init();
+	
+	TCCR1B = 5<<CS10; // 1024 prescaler
+	enum { tcnt1_hz = F_CPU / 1024 };
+	
+	unsigned prev_time = TCNT1;
 	for ( ;; )
 	{
-		byte new_leds = keyboard_leds;
-		if ( leds != new_leds )
-		{
-			leds = new_leds;
-			adb_host_kbd_led( ~leds & 0x07 );
-		}
+		// Limit ADB poll rate
+		enum { min_period = (long) tcnt1_hz * min_adb_ms / 1000 };
+		while ( TCNT1 - prev_time < min_period )
+			{ }
+		prev_time = TCNT1;
 		
-		// Get USB interrupt activity out of the way before doing time-sensitive ADB stuff
-		delay_msec( 7 );
-		sleep();
-		
-		pos = adb_debug_pos;
+		cli(); // don't let anything upset ADB timing
 		uint16_t keys = adb_host_kbd_recv();
-		if ( keys == adb_host_nothing )
-			continue;
+		sei();
 		
-		if ( keys == adb_host_error )
+		if ( keys == adb_host_nothing || keys == adb_host_error )
 		{
-			debug_str( "error\n" );
-			while ( pos != adb_debug_pos )
-				debug_byte( adb_debug_log [pos++ & 0x3F] );
-			debug_newline();
-			
-			continue;
+			if ( release_caps() )
+				usb_keyboard_send();
 		}
-		
-		debug_word( keys );
-		debug_flush();
-		
-		// Split the two key events
-		handle_key( keys >> 8 );
-		byte key = keys & 0xFF;
-		if ( (key & 0x7F) != 0x7F )
-			handle_key( key );
-		usb_keyboard_send();
+		else
+		{
+			release_caps();
+			
+			// Send the two events received in separate USB transfers,
+			// so that keys stay in order pressed. We've got plenty of
+			// USB bandwidth so use it. This avoids all the fine points
+			// with an ADB event having the same key in both bytes.
+			parse_adb( keys >> 8 );
+			usb_keyboard_send();
+			
+			// Ignore duplicates or non-event
+			if ( (keys >> 8) != (keys & 0xFF) && (keys & 0x7F) != 0x7F )
+			{
+				parse_adb( keys & 0xFF );
+				usb_keyboard_send();
+			}
+		}
+
+		handle_leds();
 	}
 }

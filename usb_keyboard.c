@@ -23,6 +23,11 @@
 
 // Version 1.0: Initial Release
 // Version 1.1: Add support for Teensy 2.0
+// Version 1.1.1 (unofficial): Add configurable USB_KEYBOARD_BINTERVAL
+
+#ifndef USB_KEYBOARD_BINTERVAL
+	#define USB_KEYBOARD_BINTERVAL 1
+#endif
 
 #define USB_SERIAL_PRIVATE_INCLUDE
 #include "usb_keyboard.h"
@@ -83,27 +88,26 @@ static const uint8_t PROGMEM endpoint_config_table[] = {
  **************************************************************************/
 
 // Descriptors are the data that your computer reads when it auto-detects
-// this USB device (called "enumeration" in USB lingo).  The most commonly
-// changed items are editable at the top of this file.  Changing things
+// this USB device (called "enumeration" in USB lingo).	 The most commonly
+// changed items are editable at the top of this file.	Changing things
 // in here should only be done by those who've read chapter 9 of the USB
 // spec and relevant portions of any USB class specifications!
 
-
 static uint8_t PROGMEM device_descriptor[] = {
-	18,					// bLength
-	1,					// bDescriptorType
-	0x00, 0x02,				// bcdUSB
-	0,					// bDeviceClass
-	0,					// bDeviceSubClass
-	0,					// bDeviceProtocol
-	ENDPOINT0_SIZE,				// bMaxPacketSize0
-	LSB(VENDOR_ID), MSB(VENDOR_ID),		// idVendor
-	LSB(PRODUCT_ID), MSB(PRODUCT_ID),	// idProduct
-	0x00, 0x01,				// bcdDevice
-	1,					// iManufacturer
-	2,					// iProduct
-	0,					// iSerialNumber
-	1					// bNumConfigurations
+        18,                                     // bLength
+        1,                                      // bDescriptorType
+        0x00, 0x02,                             // bcdUSB
+        0,                                      // bDeviceClass
+        0,                                      // bDeviceSubClass
+        0,                                      // bDeviceProtocol
+        ENDPOINT0_SIZE,                         // bMaxPacketSize0
+        LSB(VENDOR_ID), MSB(VENDOR_ID),         // idVendor
+        LSB(PRODUCT_ID), MSB(PRODUCT_ID),       // idProduct
+        0x00, 0x01,                             // bcdDevice
+        1,                                      // iManufacturer
+        2,                                      // iProduct
+        0,                                      // iSerialNumber
+        1                                       // bNumConfigurations
 };
 
 // Keyboard Protocol 1, HID 1.11 spec, Appendix B, page 59-60
@@ -145,42 +149,42 @@ static uint8_t PROGMEM keyboard_hid_report_desc[] = {
 #define CONFIG1_DESC_SIZE        (9+9+9+7)
 #define KEYBOARD_HID_DESC_OFFSET (9+9)
 static uint8_t PROGMEM config1_descriptor[CONFIG1_DESC_SIZE] = {
-	// configuration descriptor, USB spec 9.6.3, page 264-266, Table 9-10
-	9, 					// bLength;
-	2,					// bDescriptorType;
-	LSB(CONFIG1_DESC_SIZE),			// wTotalLength
-	MSB(CONFIG1_DESC_SIZE),
-	1,					// bNumInterfaces
-	1,					// bConfigurationValue
-	0,					// iConfiguration
-	0xC0,					// bmAttributes
-	50,					// bMaxPower
-	// interface descriptor, USB spec 9.6.5, page 267-269, Table 9-12
-	9,					// bLength
-	4,					// bDescriptorType
-	KEYBOARD_INTERFACE,			// bInterfaceNumber
-	0,					// bAlternateSetting
-	1,					// bNumEndpoints
-	0x03,					// bInterfaceClass (0x03 = HID)
-	0x01,					// bInterfaceSubClass (0x01 = Boot)
-	0x01,					// bInterfaceProtocol (0x01 = Keyboard)
-	0,					// iInterface
-	// HID interface descriptor, HID 1.11 spec, section 6.2.1
-	9,					// bLength
-	0x21,					// bDescriptorType
-	0x11, 0x01,				// bcdHID
-	0,					// bCountryCode
-	1,					// bNumDescriptors
-	0x22,					// bDescriptorType
-	sizeof(keyboard_hid_report_desc),	// wDescriptorLength
-	0,
-	// endpoint descriptor, USB spec 9.6.6, page 269-271, Table 9-13
-	7,					// bLength
-	5,					// bDescriptorType
-	KEYBOARD_ENDPOINT | 0x80,		// bEndpointAddress
-	0x03,					// bmAttributes (0x03=intr)
-	KEYBOARD_SIZE, 0,			// wMaxPacketSize
-	1					// bInterval
+        // configuration descriptor, USB spec 9.6.3, page 264-266, Table 9-10
+        9,                                      // bLength;
+        2,                                      // bDescriptorType;
+        LSB(CONFIG1_DESC_SIZE),                 // wTotalLength
+        MSB(CONFIG1_DESC_SIZE),
+        1,                                      // bNumInterfaces
+        1,                                      // bConfigurationValue
+        0,                                      // iConfiguration
+        0xC0,                                   // bmAttributes
+        50,                                     // bMaxPower
+        // interface descriptor, USB spec 9.6.5, page 267-269, Table 9-12
+        9,                                      // bLength
+        4,                                      // bDescriptorType
+        KEYBOARD_INTERFACE,                     // bInterfaceNumber
+        0,                                      // bAlternateSetting
+        1,                                      // bNumEndpoints
+        0x03,                                   // bInterfaceClass (0x03 = HID)
+        0x01,                                   // bInterfaceSubClass (0x01 = Boot)
+        0x01,                                   // bInterfaceProtocol (0x01 = Keyboard)
+        0,                                      // iInterface
+        // HID interface descriptor, HID 1.11 spec, section 6.2.1
+        9,                                      // bLength
+        0x21,                                   // bDescriptorType
+        0x11, 0x01,                             // bcdHID
+        0,                                      // bCountryCode
+        1,                                      // bNumDescriptors
+        0x22,                                   // bDescriptorType
+        sizeof(keyboard_hid_report_desc),       // wDescriptorLength
+        0,
+        // endpoint descriptor, USB spec 9.6.6, page 269-271, Table 9-13
+        7,                                      // bLength
+        5,                                      // bDescriptorType
+        KEYBOARD_ENDPOINT | 0x80,               // bEndpointAddress
+        0x03,                                   // bmAttributes (0x03=intr)
+        KEYBOARD_SIZE, 0,                       // wMaxPacketSize
+        USB_KEYBOARD_BINTERVAL                  // bInterval
 };
 
 // If you're desperate for a little extra code memory, these strings
@@ -236,7 +240,7 @@ static struct descriptor_list_struct {
 static volatile uint8_t usb_configuration=0;
 
 // which modifier keys are currently pressed
-// 1=left ctrl,    2=left shift,   4=left alt,    8=left gui
+// 1=left ctrl,	   2=left shift,   4=left alt,	  8=left gui
 // 16=right ctrl, 32=right shift, 64=right alt, 128=right gui
 uint8_t keyboard_modifier_keys=0;
 
@@ -272,11 +276,11 @@ void usb_init(void)
 	HW_CONFIG();
 	USB_FREEZE();	// enable USB
 	PLL_CONFIG();				// config PLL
-        while (!(PLLCSR & (1<<PLOCK))) ;	// wait for PLL lock
-        USB_CONFIG();				// start USB clock
-        UDCON = 0;				// enable attach resistor
+	while (!(PLLCSR & (1<<PLOCK))) ;	// wait for PLL lock
+	USB_CONFIG();				// start USB clock
+	UDCON = 0;				// enable attach resistor
 	usb_configuration = 0;
-        UDIEN = (1<<EORSTE)|(1<<SOFE);
+	UDIEN = (1<<EORSTE)|(1<<SOFE);
 	sei();
 }
 
@@ -352,16 +356,16 @@ ISR(USB_GEN_vect)
 	uint8_t intbits, i;
 	static uint8_t div4=0;
 
-        intbits = UDINT;
-        UDINT = 0;
-        if (intbits & (1<<EORSTI)) {
+	intbits = UDINT;
+	UDINT = 0;
+	if (intbits & (1<<EORSTI)) {
 		UENUM = 0;
 		UECONX = 1;
 		UECFG0X = EP_TYPE_CONTROL;
 		UECFG1X = EP_SIZE(ENDPOINT0_SIZE) | EP_SINGLE_BUFFER;
 		UEIENX = (1<<RXSTPE);
 		usb_configuration = 0;
-        }
+	}
 	if ((intbits & (1<<SOFI)) && usb_configuration) {
 		if (keyboard_idle_config && (++div4 & 3) == 0) {
 			UENUM = KEYBOARD_ENDPOINT;
@@ -403,15 +407,15 @@ static inline void usb_ack_out(void)
 
 
 
-// USB Endpoint Interrupt - endpoint 0 is handled here.  The
+// USB Endpoint Interrupt - endpoint 0 is handled here.	 The
 // other endpoints are manipulated by the user-callable
 // functions, and the start-of-frame interrupt.
 //
 ISR(USB_COM_vect)
 {
-        uint8_t intbits;
+	uint8_t intbits;
 	const uint8_t *list;
-        const uint8_t *cfg;
+	const uint8_t *cfg;
 	uint8_t i, n, len, en;
 	uint8_t bmRequestType;
 	uint8_t bRequest;
@@ -420,21 +424,21 @@ ISR(USB_COM_vect)
 	uint16_t wLength;
 	uint16_t desc_val;
 	const uint8_t *desc_addr;
-	uint8_t	desc_length;
+	uint8_t desc_length;
 
-        UENUM = 0;
+	UENUM = 0;
 	intbits = UEINTX;
-        if (intbits & (1<<RXSTPI)) {
-                bmRequestType = UEDATX;
-                bRequest = UEDATX;
-                wValue = UEDATX;
-                wValue |= (UEDATX << 8);
-                wIndex = UEDATX;
-                wIndex |= (UEDATX << 8);
-                wLength = UEDATX;
-                wLength |= (UEDATX << 8);
-                UEINTX = ~((1<<RXSTPI) | (1<<RXOUTI) | (1<<TXINI));
-                if (bRequest == GET_DESCRIPTOR) {
+	if (intbits & (1<<RXSTPI)) {
+		bmRequestType = UEDATX;
+		bRequest = UEDATX;
+		wValue = UEDATX;
+		wValue |= (UEDATX << 8);
+		wIndex = UEDATX;
+		wIndex |= (UEDATX << 8);
+		wLength = UEDATX;
+		wLength |= (UEDATX << 8);
+		UEINTX = ~((1<<RXSTPI) | (1<<RXOUTI) | (1<<TXINI));
+		if (bRequest == GET_DESCRIPTOR) {
 			list = (const uint8_t *)descriptor_list;
 			for (i=0; ; i++) {
 				if (i >= NUM_DESC_LIST) {
@@ -475,7 +479,7 @@ ISR(USB_COM_vect)
 				usb_send_in();
 			} while (len || n == ENDPOINT0_SIZE);
 			return;
-                }
+		}
 		if (bRequest == SET_ADDRESS) {
 			usb_send_in();
 			usb_wait_in_ready();
@@ -495,8 +499,8 @@ ISR(USB_COM_vect)
 					UECFG1X = pgm_read_byte(cfg++);
 				}
 			}
-        		UERST = 0x1E;
-        		UERST = 0;
+			UERST = 0x1E;
+			UERST = 0;
 			return;
 		}
 		if (bRequest == GET_CONFIGURATION && bmRequestType == 0x80) {

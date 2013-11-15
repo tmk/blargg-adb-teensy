@@ -1,55 +1,22 @@
-/* USB HID key codes */
+// USB HID key codes
 
-/*
-Copyright 2011,2012 Jun Wako <wakojun@gmail.com>
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
-/* 
- * Keycodes based on HID Usage Keyboard/Keypad Page(0x07) plus special codes
- * http://www.usb.org/developers/devclass_docs/Hut1_12.pdf
- */
 #ifndef KEYCODE_H
 #define KEYCODE_H
 
+/* Copyright 2011,2012 Jun Wako <wakojun@gmail.com>
+This program is free software: you can redistribute it and/or modify it under 
+the terms of the GNU General Public License as published by the Free Software 
+Foundation, either version 2 of the License, or (at your option) any later 
+version. This program is distributed in the hope that it will be useful, but 
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+details. You should have received a copy of the GNU General Public License 
+along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-#define IS_ERROR(code)           (KC_ROLL_OVER <= (code) && (code) <= KC_UNDEFINED)
-#define IS_ANY(code)             (KC_A         <= (code) && (code) <= 0xFF)
-#define IS_KEY(code)             (KC_A         <= (code) && (code) <= KC_EXSEL)
-#define IS_MOD(code)             (KC_LCTRL     <= (code) && (code) <= KC_RGUI)
+// Keycodes based on HID Usage Keyboard/Keypad Page(0x07) plus special codes
+// http://www.usb.org/developers/devclass_docs/Hut1_12.pdf
 
-#define IS_FN(code)              (KC_FN0       <= (code) && (code) <= KC_FN7)
-#define IS_MOUSEKEY(code)        (KC_MS_UP     <= (code) && (code) <= KC_MS_ACCEL2)
-#define IS_MOUSEKEY_MOVE(code)   (KC_MS_UP     <= (code) && (code) <= KC_MS_RIGHT)
-#define IS_MOUSEKEY_BUTTON(code) (KC_MS_BTN1   <= (code) && (code) <= KC_MS_BTN5)
-#define IS_MOUSEKEY_WHEEL(code)  (KC_MS_WH_UP  <= (code) && (code) <= KC_MS_WH_RIGHT)
-#define IS_MOUSEKEY_ACCEL(code)  (KC_MS_ACCEL0 <= (code) && (code) <= KC_MS_ACCEL2)
-
-#define IS_SPECIAL(code)         ((0xB0 <= (code) && (code) <= 0xDF) || (0xE8 <= (code) && (code) <= 0xFF))
-#define IS_CONSUMER(code)        (KC_MUTE      <= (code) && (code) <= KC_WFAV)
-#define IS_SYSTEM(code)          (KC_POWER     <= (code) && (code) <= KC_WAKE)
-
-#define MOD_BIT(code)   (1<<MOD_INDEX(code))
-#define MOD_INDEX(code) ((code) & 0x07)
-#define FN_BIT(code)    (1<<FN_INDEX(code))
-#define FN_INDEX(code)  ((code) - KC_FN0)
-
-
-/*
- * Short names for ease of definition of keymap
- */
+// Short names for ease of definition of keymap
 #define KC_LCTL KC_LCTRL
 #define KC_RCTL KC_RCTRL
 #define KC_LSFT KC_LSHIFT
@@ -126,29 +93,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define KC_ACL0 KC_MS_ACCEL0
 #define KC_ACL1 KC_MS_ACCEL1
 #define KC_ACL2 KC_MS_ACCEL2
-/* Sytem Control */
-#define KC_PWR  KC_SYSTEM_POWER
-#define KC_SLEP KC_SYSTEM_SLEEP
-#define KC_WAKE KC_SYSTEM_WAKE
-/* Consumer Page */
-#define KC_MUTE KC_AUDIO_MUTE
-#define KC_VOLU KC_AUDIO_VOL_UP
-#define KC_VOLD KC_AUDIO_VOL_DOWN
-#define KC_MNXT KC_MEDIA_NEXT_TRACK
-#define KC_MPRV KC_MEDIA_PREV_TRACK
-#define KC_MSTP KC_MEDIA_STOP
-#define KC_MPLY KC_MEDIA_PLAY_PAUSE
-#define KC_MSEL KC_MEDIA_SELECT
-#define KC_MAIL KC_MAIL
-#define KC_CALC KC_CALCULATOR
-#define KC_MYCM KC_MY_COMPUTER
-#define KC_WSCH KC_WWW_SEARCH
-#define KC_WHOM KC_WWW_HOME
-#define KC_WBAK KC_WWW_BACK
-#define KC_WFWD KC_WWW_FORWARD
-#define KC_WSTP KC_WWW_STOP
-#define KC_WREF KC_WWW_REFRESH
-#define KC_WFAV KC_WWW_FAVORITES
 
 
 /* USB HID Keyboard/Keypad Usage(0x07) */
@@ -319,57 +263,6 @@ enum hid_keyboard_keypad_usage {
     KC_CRSEL,
     KC_EXSEL,           /* 0xA4 */
 
-    /* NOTE: 0xA5-DF are used for internal special purpose */
-
-#if 0
-    /* NOTE: Following codes(0xB0-DD) are not used. Leave them for reference. */
-    KC_KP_00            = 0xB0,
-    KC_KP_000,
-    KC_THOUSANDS_SEPARATOR,
-    KC_DECIMAL_SEPARATOR,
-    KC_CURRENCY_UNIT,
-    KC_CURRENCY_SUB_UNIT,
-    KC_KP_LPAREN,
-    KC_KP_RPAREN,
-    KC_KP_LCBRACKET,    /* { */
-    KC_KP_RCBRACKET,    /* } */
-    KC_KP_TAB,
-    KC_KP_BSPACE,
-    KC_KP_A,
-    KC_KP_B,
-    KC_KP_C,
-    KC_KP_D,
-    KC_KP_E,            /* 0xC0 */
-    KC_KP_F,
-    KC_KP_XOR,
-    KC_KP_HAT,
-    KC_KP_PERC,
-    KC_KP_LT,
-    KC_KP_GT,
-    KC_KP_AND,
-    KC_KP_LAZYAND,
-    KC_KP_OR,
-    KC_KP_LAZYOR,
-    KC_KP_COLON,
-    KC_KP_HASH,
-    KC_KP_SPACE,
-    KC_KP_ATMARK,
-    KC_KP_EXCLAMATION,
-    KC_KP_MEM_STORE,    /* 0xD0 */
-    KC_KP_MEM_RECALL,
-    KC_KP_MEM_CLEAR,
-    KC_KP_MEM_ADD,
-    KC_KP_MEM_SUB,
-    KC_KP_MEM_MUL,
-    KC_KP_MEM_DIV,
-    KC_KP_PLUS_MINUS,
-    KC_KP_CLEAR,
-    KC_KP_CLEAR_ENTRY,
-    KC_KP_BINARY,
-    KC_KP_OCTAL,
-    KC_KP_DECIMAL,
-    KC_KP_HEXADECIMAL,  /* 0xDD */
-#endif
 
     /* Modifiers */
     KC_LCTRL            = 0xE0,
@@ -380,71 +273,6 @@ enum hid_keyboard_keypad_usage {
     KC_RSHIFT,
     KC_RALT,
     KC_RGUI,
-
-    /* NOTE: 0xE8-FF are used for internal special purpose */ 
 };
 
-/* Special keycodes */
-/* NOTE: 0xA5-DF and 0xE8-FF are used for internal special purpose */
-enum internal_special_keycodes {
-    /* System Control */
-    KC_SYSTEM_POWER     = 0xA5,
-    KC_SYSTEM_SLEEP,
-    KC_SYSTEM_WAKE,     /* 0xA7 */
-                        /* 0xA8-AF */
-
-    /* Consumer Page */
-    KC_AUDIO_MUTE       = 0xB0,
-    KC_AUDIO_VOL_UP,
-    KC_AUDIO_VOL_DOWN,
-    KC_MEDIA_NEXT_TRACK,
-    KC_MEDIA_PREV_TRACK,
-    KC_MEDIA_STOP,
-    KC_MEDIA_PLAY_PAUSE,
-    KC_MEDIA_SELECT,
-    KC_MAIL,
-    KC_CALCULATOR,
-    KC_MY_COMPUTER,
-    KC_WWW_SEARCH,
-    KC_WWW_HOME,
-    KC_WWW_BACK,
-    KC_WWW_FORWARD,
-    KC_WWW_STOP,
-    KC_WWW_REFRESH,     /* 0xC0 */
-    KC_WWW_FAVORITES,   /* 0xC1 */
-                        /* 0xC2-DF vacant for future use */
-
-    /* 0xE0-E7 for Modifiers. DO NOT USE. */
-
-    /* Layer Switching */
-    KC_FN0              = 0xE8,
-    KC_FN1,
-    KC_FN2,
-    KC_FN3,
-    KC_FN4,
-    KC_FN5,
-    KC_FN6,
-    KC_FN7,             /* 0xEF */
-
-    /* Mousekey */
-    KC_MS_UP            = 0xF0,
-    KC_MS_DOWN,
-    KC_MS_LEFT,
-    KC_MS_RIGHT,
-    KC_MS_BTN1,
-    KC_MS_BTN2,
-    KC_MS_BTN3,
-    KC_MS_BTN4,
-    KC_MS_BTN5,         /* 0xF8 */
-    /* Mousekey wheel */
-    KC_MS_WH_UP,
-    KC_MS_WH_DOWN,
-    KC_MS_WH_LEFT,
-    KC_MS_WH_RIGHT,     /* 0xFC */
-    /* Mousekey accel */
-    KC_MS_ACCEL0,
-    KC_MS_ACCEL1,
-    KC_MS_ACCEL2        /* 0xFF */
-};
-
-#endif /* KEYCODE_H */
+#endif
